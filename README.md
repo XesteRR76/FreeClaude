@@ -106,4 +106,4 @@ cd /home/koksik/.gemini/antigravity-ide/scratch/claude-gemini-proxy
 ```bash
 ./venv/bin/pytest -v
 ```
-Все 17 модульных и интеграционных тестов проходят успешно.
+Все 18 модульных и интеграционных тестов проходят успешно.
