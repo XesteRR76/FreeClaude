@@ -94,6 +94,10 @@ class ModelFallbackCoordinator:
         else:
             models_to_try = list(self.models)
 
+        # Safeguard: if all models are cooling down, clear cooldowns so requests never fail with 429
+        if all(self.is_model_cooling_down(m) for m in models_to_try):
+            self._model_cooldowns.clear()
+
         last_error: Optional[Exception] = None
 
         for model_idx, model in enumerate(models_to_try):
@@ -270,6 +274,10 @@ class ModelFallbackCoordinator:
         else:
             models_to_try = list(self.models)
 
+        # Safeguard: if all models are cooling down, clear cooldowns so requests never fail with 429
+        if all(self.is_model_cooling_down(m) for m in models_to_try):
+            self._model_cooldowns.clear()
+
         last_error: Optional[Exception] = None
 
         for model in models_to_try:
@@ -359,7 +367,7 @@ class ModelFallbackCoordinator:
                     # Prime generator to verify connection succeeds (200 OK)
                     first_chunk = None
                     try:
-                        first_chunk = await asyncio.wait_for(chunk_gen.__anext__(), timeout=6.0)
+                        first_chunk = await asyncio.wait_for(chunk_gen.__anext__(), timeout=15.0)
                     except StopAsyncIteration:
                         first_chunk = None
 
@@ -386,10 +394,10 @@ class ModelFallbackCoordinator:
                 except (asyncio.TimeoutError, httpx.TimeoutException) as e:
                     logger.warning(
                         f"{TerminalColors.YELLOW}[STREAM INIT TIMEOUT]{TerminalColors.RESET} "
-                        f"Model {model} timed out during stream init (>6s). "
-                        f"Marking model cooldown {int(settings.model_overload_cooldown_seconds)}s and cascading to next model..."
+                        f"Model {model} timed out during stream init (>15s). "
+                        f"Marking model cooldown 20s and cascading to next model..."
                     )
-                    self.mark_model_cooldown(model)
+                    self.mark_model_cooldown(model, duration=20.0)
                     last_error = e
                     break
 
