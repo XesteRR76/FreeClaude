@@ -1,9 +1,11 @@
+import asyncio
 import json
 import logging
 import sys
 import time
 import uuid
 from typing import Any, AsyncGenerator, Dict, List, Optional, Set, Tuple
+import httpx
 from app.config import settings
 from app.key_manager import key_manager, mask_key
 from app.gemini_client import (
@@ -357,7 +359,7 @@ class ModelFallbackCoordinator:
                     # Prime generator to verify connection succeeds (200 OK)
                     first_chunk = None
                     try:
-                        first_chunk = await chunk_gen.__anext__()
+                        first_chunk = await asyncio.wait_for(chunk_gen.__anext__(), timeout=25.0)
                     except StopAsyncIteration:
                         first_chunk = None
 
@@ -380,6 +382,16 @@ class ModelFallbackCoordinator:
                         yield sse_event
 
                     return
+
+                except (asyncio.TimeoutError, httpx.TimeoutException) as e:
+                    logger.warning(
+                        f"{TerminalColors.YELLOW}[STREAM INIT TIMEOUT]{TerminalColors.RESET} "
+                        f"Model {model} timed out during stream init (>25s). "
+                        f"Marking model cooldown {int(settings.model_overload_cooldown_seconds)}s and cascading to next model..."
+                    )
+                    self.mark_model_cooldown(model)
+                    last_error = e
+                    break
 
                 except GeminiRateLimitError as e:
                     key_manager.mark_cooldown(key, model=model, duration=settings.cooldown_seconds)
