@@ -359,7 +359,7 @@ class ModelFallbackCoordinator:
                     # Prime generator to verify connection succeeds (200 OK)
                     first_chunk = None
                     try:
-                        first_chunk = await asyncio.wait_for(chunk_gen.__anext__(), timeout=25.0)
+                        first_chunk = await asyncio.wait_for(chunk_gen.__anext__(), timeout=6.0)
                     except StopAsyncIteration:
                         first_chunk = None
 
@@ -386,7 +386,7 @@ class ModelFallbackCoordinator:
                 except (asyncio.TimeoutError, httpx.TimeoutException) as e:
                     logger.warning(
                         f"{TerminalColors.YELLOW}[STREAM INIT TIMEOUT]{TerminalColors.RESET} "
-                        f"Model {model} timed out during stream init (>25s). "
+                        f"Model {model} timed out during stream init (>6s). "
                         f"Marking model cooldown {int(settings.model_overload_cooldown_seconds)}s and cascading to next model..."
                     )
                     self.mark_model_cooldown(model)
